@@ -1,0 +1,11 @@
+/upstream/
+/dist/
+*.wad
+*.WAD
+__pycache__/
+/.venv/
+/.test-deps/
+/device-backup-*/
+/verification/
+/probe.png
+/PLAN.md
