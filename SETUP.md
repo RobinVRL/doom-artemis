@@ -26,11 +26,13 @@ Place the shareware WAD in the project folder as `doom1.wad`. [Shareware WAD dow
 
 3. Wait for `Save committed`. Reopen the launcher and press **B**. On the Doom title screen, press **A** to open the menu and choose **New Game**.
 
-The installer backs up existing slot B scripts and installs both Lua files and the shareware WAD. If you use your own save transfer workflow, copy these files to the root of the launcher save and commit the save through that workflow.
+The installer backs up existing slot B scripts and installs both Lua files and the shareware WAD.
 
-- Run `py build.py` to generate the Lua payloads in `dist/`.
-- Copy `exploitb.lua` and `exploitb2.lua` for the standard launcher. For DialingSpoon, copy `ax_exploitb.lua` and `ax_exploitb2.lua`.
-- Copy `doom1.wad` as `doom_iwad.wad`.
+## Bundle for manual transfer
+
+Run `py release.py` for the standard launcher or `py release.py --dialingspoon` for the `ax_` filenames. The command creates `dist/doom-switch2.zip` or `dist/doom-switch2-dialingspoon.zip`.
+
+Extract the ZIP into the root of the launcher save and commit the save through your transfer workflow. The archive contains the two slot B scripts and `doom_iwad.wad`. Reopen the launcher and press **B**.
 
 ## Joy-Con controls
 
