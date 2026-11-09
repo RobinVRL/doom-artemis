@@ -1,4 +1,4 @@
-"""Build a save-root ZIP for manual transfer to the Switch."""
+"""Bundle the prebuilt payload, WAD, and standalone installer."""
 
 import argparse
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -24,6 +24,8 @@ def main():
         for name in ('exploitb.lua', 'exploitb2.lua'):
             archive.writestr(prefix + name, scripts)
         archive.write(wad, 'doom_iwad.wad')
+        for name in ('deploy.py', 'console.py'):
+            archive.write(ROOT / name, name)
     print(archive_path)
 
 

@@ -4,14 +4,31 @@ import json
 import hashlib
 from datetime import datetime
 from ipaddress import ip_address
+from pathlib import Path
 from console import Console
-from build import build, ROOT
+
+ROOT = Path(__file__).resolve().parent
 
 def main():
     parser = argparse.ArgumentParser(description='Install Doom in launcher slot B.')
     parser.add_argument('--dialingspoon', action='store_true', help='Use the ax_ filenames for the DialingSpoon launcher.')
     prefix = 'ax_' if parser.parse_args().dialingspoon else ''
     targets = tuple(f'save:/{prefix}{name}' for name in ('exploitb.lua', 'exploitb2.lua'))
+    wad = ROOT / 'doom_iwad.wad'
+    if wad.is_file():
+        payload = next((ROOT / name for name in ('exploitb.lua', 'ax_exploitb.lua')
+                        if (ROOT / name).is_file()), None)
+        if payload is None:
+            parser.error('Extract the bundled Lua scripts alongside deploy.py.')
+    else:
+        wad = ROOT / 'doom1.wad'
+        if not wad.is_file():
+            parser.error('Extract the release ZIP or place doom1.wad in the source checkout.')
+        from build import build
+        payload = build()
+    if wad.read_bytes()[:4] != b'IWAD':
+        parser.error(f'{wad.name} is not a valid IWAD.')
+
     while True:
         try:
             address = ip_address(input('Switch IP address: ').strip())
@@ -19,10 +36,6 @@ def main():
         except ValueError:
             print('Enter a valid IP address.')
     host = f'[{address}]' if address.version == 6 else str(address)
-    payload = build()
-    wad = ROOT / 'doom1.wad'
-    if not wad.is_file() or wad.read_bytes()[:4] != b'IWAD':
-        parser.error('Place a valid shareware IWAD named doom1.wad in the project folder.')
     c = Console(f'http://{host}:8080')
     c.eval("local N=assert(n2h); local ok,addr=pcall(N.sdk,'fs_commit_save_data'); assert(ok and type(addr)=='number' and addr>0, 'A v2-compatible launcher with save commit support is required')")
     (ROOT / 'verification').mkdir(exist_ok=True)

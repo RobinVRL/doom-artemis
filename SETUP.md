@@ -1,10 +1,10 @@
 # Doom on Switch 2 setup
 
-You need a Switch 2 with the Seedsow Artemis launcher and its v2-compatible HTTP server, plus Python 3 and Git on your PC. If Doom is already installed, open the launcher and press **B**.
+You need a Switch 2 with the Seedsow Artemis launcher and its v2-compatible HTTP server, plus Python 3 on your PC. If Doom is already installed, open the launcher and press **B**.
 
-## Prepare a fresh checkout
+## Build from a fresh checkout
 
-In PowerShell, open the project folder and fetch the engine at the tested revision.
+Skip this section if you have a release ZIP. To build from source, open the project folder in PowerShell and fetch the engine at the tested revision.
 
 ```powershell
 git clone https://github.com/vagucs/lua_doom.git upstream
@@ -16,7 +16,7 @@ Place the shareware WAD in the project folder as `doom1.wad`. [Shareware WAD dow
 ## Install from Windows
 
 1. Connect the PC and Switch 2 to the same network. Open the launcher and press **Y** to start its HTTP server.
-2. Open PowerShell in the project folder and run the installer. Enter your Switch's IP address when prompted. The installer connects on port `8080`.
+2. Extract the release ZIP and open PowerShell in the extracted folder. If you built from source, use the project folder instead. Run the installer and enter your Switch's IP address when prompted. The installer connects on port `8080`.
 
    ```powershell
    py deploy.py
@@ -28,11 +28,11 @@ Place the shareware WAD in the project folder as `doom1.wad`. [Shareware WAD dow
 
 The installer backs up existing slot B scripts and installs both Lua files and the shareware WAD.
 
-## Bundle for manual transfer
+## Create release bundles
 
 Run `py release.py` for the standard launcher or `py release.py --dialingspoon` for the `ax_` filenames. The command creates `dist/doom-switch2.zip` or `dist/doom-switch2-dialingspoon.zip`.
 
-Extract the ZIP into the root of the launcher save and commit the save through your transfer workflow. The archive contains the two slot B scripts and `doom_iwad.wad`. Reopen the launcher and press **B**.
+Each ZIP includes the two slot B scripts, `doom_iwad.wad`, `deploy.py`, and `console.py`. For manual transfer, extract the ZIP on your PC, copy the two Lua files and `doom_iwad.wad` to the launcher save root, and commit the save through your transfer workflow. Reopen the launcher and press **B**.
 
 ## Joy-Con controls
 
