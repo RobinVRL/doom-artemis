@@ -21,6 +21,6 @@ The build writes `dist/doom.lua` and copies it to both sets of launcher filename
 
 At the default view size, low detail renders the world in a 160×84 viewport, expands it to 320×168, then draws the HUD at full resolution. Set `doom_config.fast_view = false` before loading the payload to use the previous low-detail viewport. High detail is available in Doom's options.
 
-The earlier build measured about 5 FPS on the Switch 2. The reduced viewport was tested locally. Audio is disabled. Game saves use `save:/doom_save<slot>.dsg` and need a launcher save commit to persist.
+In a 13-second E1M1 turning test on Switch 2, the reduced viewport presented 90 frames (6.92 FPS), up from 70 frames (5.38 FPS). Frame rate varies by scene. Audio is disabled. Game saves use `save:/doom_save<slot>.dsg` and need a launcher save commit to persist.
 
 See the [diagnostic guide](DIAGNOSTICS.md) for troubleshooting. The upstream checkout, WAD, generated payloads, and device records are kept outside Git tracking.

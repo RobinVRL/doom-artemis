@@ -40,4 +40,4 @@ The installer backs up existing slot B scripts and installs both Lua files and t
 - Press **Plus** to open the menu. Navigate with the **D-pad**, confirm with **A**, and go back with **B**.
 - Press **Minus** to exit Doom. Reopen the game to return to the launcher if you started from slot B.
 
-The tested build runs at about **5 FPS** in E1M1, with game simulation near its intended speed. Audio is disabled.
+The tested build presented about **7 FPS** while turning in E1M1. Frame rate varies by scene. Audio is disabled.
