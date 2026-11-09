@@ -57,13 +57,15 @@ print("lua_doom: " .. runtime .. "  Tab abre o mapa, o texto final conta a histo
 doom_checkpoint('first startup print returned')''')
     source = replace_once(source, 'function M.poll()\n    local keys, events = {}, {}',
         'function M.poll()\n    if true then return {} end\n    local keys, events = {}, {}')
-    source = replace_once(source, '    local bytes = png.encode(raw, assert(palette), H.width, H.height)',
-        "    doom_checkpoint('encode framebuffer')\n    local bytes = png.encode(raw, assert(palette), H.width, H.height)\n    doom_checkpoint('write framebuffer')")
-    start = source.index('    -- The alternating paths keep a frame alive')
-    end = source.index('    H.frames = H.frames + 1', start)
-    source = source[:start] + "    doom_checkpoint('frame file ready; display skipped')\n" + source[end:]
-    source = replace_once(source, "function M.shutdown()\n    engine:tag{'lydel', id=layer}\n    engine:tag{'flip'}",
-        "function M.shutdown()\n    doom_checkpoint('stopped')")
+    source = replace_once(source, '    local bytes = png.encode(raw, assert(palette), width, height)',
+        "    doom_checkpoint('encode framebuffer')\n    local bytes = png.encode(raw, assert(palette), width, height)\n    doom_checkpoint('write framebuffer')")
+    start = source.index('local function show_frame(')
+    end = source.index('function M.present(', start)
+    source = source[:start] + "local function show_frame()\n    doom_checkpoint('frame file ready; display skipped')\nend\n\n" + source[end:]
+    source = replace_once(source, "    engine:tag{'flip'}\n    H.frames = H.frames + 1", '    H.frames = H.frames + 1')
+    start = source.index('function M.shutdown()\n')
+    end = source.index('    for _, path in ipairs(frame_paths)', start)
+    source = source[:start] + "function M.shutdown()\n    doom_checkpoint('stopped')\n" + source[end:]
     source = replace_once(source, '    H.callbacks = H.callbacks + 1',
         "    if H.frames > 0 then return end\n    if H.diagnostic_pause and not H.config.resume_diagnostic then return end\n    doom_checkpoint('first frame callback')\n    H.callbacks = H.callbacks + 1")
     source = replace_once(source, 'if n2h_clear then n2h_clear() end\ne:setEventHandler',

@@ -197,6 +197,26 @@ class PortTests(unittest.TestCase):
             self.assertEqual([v[1] for v in tags[:3]], [b'lydel', b'unbindSurface', b'lyc'])
             self.assertEqual(tags[1][b'file'], str(Path(folder) / 'a.png').encode())
 
+    def test_split_presentation_keeps_hud_until_it_changes_and_clears_on_full_frame(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as folder:
+            lua = self.backend(folder)
+            video = lua.globals().video
+            video.init(320, 200)
+            video.set_palette(bytes(768))
+            raw = bytes(64000)
+            video.present(raw, bytes(160 * 84))
+            world = (Path(folder) / 'a.png').read_bytes()
+            hud = (Path(folder) / 'a.png.hud.png').read_bytes()
+            self.assertEqual(struct.unpack_from('>II', world, 16), (160, 84))
+            self.assertEqual(struct.unpack_from('>II', hud, 16), (320, 32))
+            video.present(raw, bytes([1]) * (160 * 84))
+            self.assertFalse((Path(folder) / 'b.png.hud.png').exists())
+            video.present(raw)
+            tags = [tag for _, tag in lua.globals().tags_seen.items()]
+            self.assertEqual([tag[1] for tag in tags[-6:]],
+                             [b'lydel', b'lydel', b'unbindSurface', b'lyc', b'lyprop', b'flip'])
+            self.assertEqual(tags[-6][b'id'], b'~201')
+
     def test_failed_frame_write_closes_file_before_reporting_error(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as folder:
             lua = self.backend(folder)

@@ -44,6 +44,8 @@ end
         source = source.replace('  detail_level = 0,', '  detail_level = doom_host.config.detail_level or 1,', 1)
         source = source.replace('local function paint_view()', '''local view_artemis = require('view_artemis')
 local reduced_fb
+local compact_view
+local compact_pixels
 local function paint_view()''', 1)
         start = source.index('  render.set_view_size(renderer, game.screen_size + 3, game.detail_level)')
         end = source.index('  if game.status and game.player and renderer.screenblocks < 11 then', start)
@@ -65,8 +67,29 @@ local function paint_view()''', 1)
   end
   if reduced then
     view_artemis.expand(world_fb, fb, renderer)
+    if doom_host.config.split_view ~= false and not game.menu.active and not game.wiping
+        and (not p or not game.show_messages or not p.message or p.message == '') then
+      compact_view = renderer
+    end
   end
 ''' + source[end:]
+        source = source.replace('local function redraw()\n', 'local function redraw()\n  compact_view, compact_pixels = nil, nil\n')
+        source = source.replace('  apply_palette()\nend\n\nlocal held', '''  apply_palette()
+  if compact_view and not game.wiping then
+    local fps = video.measured_fps()
+    if game.show_fps and fps ~= nil then
+      local text = tostring(fps) .. " FPS"
+      local width = status_mod.text_width(game.status, text)
+      status_mod.draw_text(game.status, reduced_fb,
+        compact_view.viewwindowx + compact_view.scaledviewwidth - width - 3,
+        compact_view.viewwindowy + 2, text)
+    end
+    compact_pixels = view_artemis.pack(reduced_fb, compact_view)
+  end
+end
+
+local held''')
+        source = source.replace('  video.present(raw)', '  video.present(raw, compact_pixels)')
         source = source.replace('guard < 4 do', 'guard < 9 do').replace('TICK_MS * 4 then', 'TICK_MS * 9 then')
         source = source.replace('  local text = game.fps_text or "0 FPS"', '''  local fps = video.measured_fps()
   if fps == nil or game.gamestate ~= "view" then return end

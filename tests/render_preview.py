@@ -10,6 +10,7 @@ if __name__ == '__main__':
     output.mkdir(exist_ok=True)
     test = EngineIntegrationTests()
     lua = test.boot(output)
+    lua.execute(b'doom_config.split_view=false')
     start = time.perf_counter()
     test.frame(lua)
     h = lua.globals().doom_status

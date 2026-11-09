@@ -2,6 +2,7 @@
 local M = {}
 
 local SCREEN_WIDTH = 320
+local char, concat, unpack = string.char, table.concat, unpack
 
 function M.expand(source, target, view)
     for y = 0, view.viewheight - 1 do
@@ -14,6 +15,15 @@ function M.expand(source, target, view)
             output = output + 2
         end
     end
+end
+
+function M.pack(source, view)
+    local rows = {}
+    for y = 0, view.viewheight - 1 do
+        local first = (view.viewwindowy + y) * SCREEN_WIDTH + view.viewwindowx + 1
+        rows[y + 1] = char(unpack(source, first, first + view.scaledviewwidth - 1))
+    end
+    return concat(rows)
 end
 
 return M

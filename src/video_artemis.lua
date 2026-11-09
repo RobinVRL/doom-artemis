@@ -9,6 +9,10 @@ local fps_time, fps_base
 local previous, physical = {}, {}
 local frame_paths = cfg.frame_paths or {'save:/doom_frame_a.png', 'save:/doom_frame_b.png'}
 local layer = cfg.layer or '~200'
+local hud_layer = cfg.hud_layer or '~201'
+local hud_paths = {frame_paths[1] .. '.hud.png', frame_paths[2] .. '.hud.png'}
+local hud_frames, last_hud, last_world = 0, nil, nil
+local split_active = false
 local bindings = cfg.bindings or {
     A=13, B=27, X=112, Y=113, MINUS=114, PLUS=115,
     L=116, R=117, ZL=118, ZR=119, LEFT=37, UP=38, RIGHT=39, DOWN=40,
@@ -39,29 +43,62 @@ function M.set_palette(rgb)
     assert(#rgb >= 768, 'palette is truncated')
     palette = rgb:sub(1, 768)
 end
-function M.present(raw)
-    if raw == last_raw and palette == last_palette then sample_fps(); return end
-    local path = frame_paths[H.frames % 2 + 1]
-    local bytes = png.encode(raw, assert(palette), H.width, H.height)
+local function write_frame(path, raw, width, height)
+    local bytes = png.encode(raw, assert(palette), width, height)
     local f = assert(io.open(path, 'wb'))
     local ok, wrote, why = pcall(f.write, f, bytes)
     local closed_ok, closed, close_why = pcall(f.close, f)
     assert(ok and wrote, ok and why or wrote)
     assert(closed_ok and closed, closed_ok and close_why or closed)
-    -- The alternating paths keep a frame alive while its successor loads.
-    -- Release the reserved layer even on startup, then invalidate the actual
-    -- surface using the same native method as Artemis's image cache helper.
-    engine:tag{'lydel', id=layer}
+end
+
+local function show_frame(id, path, width, height, sx, sy, x, y)
+    engine:tag{'lydel', id=id}
     if cfg.invalidate then cfg.invalidate(path)
     else engine:unbindSurface(path) end
-    engine:tag{'lyc', id=layer, file=path}
-    local sx, sy = cfg.scale_x or cfg.scale or 4, cfg.scale_y or cfg.scale or 3.6
-    -- Artemis scales about the unscaled image center; positions compensate
-    -- that shift. Native scale properties use percentages, not multipliers.
-    engine:tag{'lyprop', id=layer,
-        left=cfg.left or (H.width * sx - H.width) / 2,
-        top=cfg.top or (H.height * sy - H.height) / 2,
+    engine:tag{'lyc', id=id, file=path}
+    -- Native percentages scale around the unscaled image's center.
+    engine:tag{'lyprop', id=id,
+        left=x + width * (sx - 1) / 2,
+        top=y + height * (sy - 1) / 2,
         xscale=sx * 100, yscale=sy * 100, visible=1}
+end
+
+function M.present(raw, world)
+    local sx, sy = cfg.scale_x or cfg.scale or 4, cfg.scale_y or cfg.scale or 3.6
+    local x = (cfg.left or 160 * (sx - 1)) - 160 * (sx - 1)
+    local y = (cfg.top or 100 * (sy - 1)) - 100 * (sy - 1)
+    local path = H.frame_path
+    local palette_changed = palette ~= last_palette
+    if world then
+        assert(hud_layer ~= layer, 'world and HUD need distinct layer IDs')
+        local hud = raw:sub(320 * 168 + 1)
+        if split_active and not palette_changed and world == last_world and hud == last_hud then
+            sample_fps()
+            return
+        end
+        local entering_split = not split_active
+        split_active = true
+        if entering_split or palette_changed or world ~= last_world then
+            path = path == frame_paths[1] and frame_paths[2] or frame_paths[1]
+            write_frame(path, world, 160, 84)
+            show_frame(layer, path, 160, 84, sx * 2, sy * 2, x, y)
+        end
+        if entering_split or palette_changed or hud ~= last_hud then
+            local hud_path = hud_paths[hud_frames % 2 + 1]
+            hud_frames = hud_frames + 1
+            write_frame(hud_path, hud, 320, 32)
+            show_frame(hud_layer, hud_path, 320, 32, sx, sy, x, y + 168 * sy)
+        end
+        split_active, last_world, last_hud = true, world, hud
+    else
+        if not split_active and not palette_changed and raw == last_raw then sample_fps(); return end
+        path = path == frame_paths[1] and frame_paths[2] or frame_paths[1]
+        write_frame(path, raw, H.width, H.height)
+        if split_active then engine:tag{'lydel', id=hud_layer} end
+        split_active = false
+        show_frame(layer, path, H.width, H.height, sx, sy, x, y)
+    end
     engine:tag{'flip'}
     H.frames = H.frames + 1
     H.frame_path, H.raw = path, raw
@@ -71,8 +108,10 @@ end
 function M.measured_fps() return H.fps end
 function M.shutdown()
     engine:tag{'lydel', id=layer}
+    if split_active then engine:tag{'lydel', id=hud_layer} end
     engine:tag{'flip'}
     for _, path in ipairs(frame_paths) do os.remove(path) end
+    if hud_frames > 0 then for _, path in ipairs(hud_paths) do os.remove(path) end end
     H.raw = nil
     last_raw, last_palette, palette = nil, nil, nil
     previous, physical = {}, {}
