@@ -22,6 +22,7 @@ function M.draw(r, plane, height, flat, lights)
     local flatlen, fb = #flat, r.fb
     local width = r.detailshift == 0 and 1 or 2
     local fixed = r.fixedcolormap
+    local viewx, viewy, rows = r.viewx, r.viewy, r.ylookup
     for x = math.max(0, plane.minx), math.min(r.viewwidth - 1, plane.maxx) do
         local top, bottom = plane.top[x], plane.bottom[x]
         if top <= bottom and top ~= 255 then
@@ -37,13 +38,15 @@ function M.draw(r, plane, height, flat, lights)
                     distances[y], maps[y] = distance, map
                 end
                 local length = mul(distance, distscale)
-                local u = r.viewx + mul(cosine, length)
-                local v = -r.viewy - mul(sine, length)
-                -- The original two masks select the same 6 integer bits.
+                -- Sine/cosine times signed 32-bit length fits exactly in a
+                -- double. Wrapping the result to 32 bits cannot change the
+                -- six texture-coordinate bits selected below.
+                local u = viewx + floor(cosine * length / 65536)
+                local v = -viewy - floor(sine * length / 65536)
                 local spot = (floor(u / 65536) % 64) + (floor(v / 65536) % 64) * 64
                 local pixel = spot < flatlen and byte(flat, spot + 1) or 0
                 local value = pixel < #map and byte(map, pixel + 1) or pixel
-                local dest = r.ylookup[y] + column + 1
+                local dest = rows[y] + column + 1
                 if dest >= 1 and dest <= 64000 then fb[dest] = value end
                 if width == 2 and dest >= 0 and dest < 64000 then fb[dest + 1] = value end
             end

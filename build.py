@@ -42,6 +42,31 @@ end
 ''' + source
         source = source.replace('function game.start_sound(name)', 'doom_host.game = game\n\nfunction game.start_sound(name)')
         source = source.replace('  detail_level = 0,', '  detail_level = doom_host.config.detail_level or 1,', 1)
+        source = source.replace('local function paint_view()', '''local view_artemis = require('view_artemis')
+local reduced_fb
+local function paint_view()''', 1)
+        start = source.index('  render.set_view_size(renderer, game.screen_size + 3, game.detail_level)')
+        end = source.index('  if game.status and game.player and renderer.screenblocks < 11 then', start)
+        source = source[:start] + '''  local reduced = game.screen_size == 7 and game.detail_level ~= 0 and doom_host.config.fast_view ~= false
+  render.set_view_size(renderer, game.screen_size + 3, game.detail_level, reduced)
+  render.setup_frame(renderer, x, y, z, ang, extra, cmap)
+  v.fill(fb, 0)
+  local world_fb = fb
+  if reduced then
+    reduced_fb = reduced_fb or v.new_fb()
+    v.fill(reduced_fb, 0)
+    world_fb = reduced_fb
+  end
+  render.render(renderer, game.world, world_fb)
+  sprites.draw(renderer, game.world, world_fb)
+  render.draw_masked(renderer)
+  if p and (p.playerstate ~= player_mod.PST_DEAD or p.psprite_sy < player_mod.WEAPONBOTTOM) then
+    sprites.draw_weapon(renderer, world_fb, p, game.leveltime or 0)
+  end
+  if reduced then
+    view_artemis.expand(world_fb, fb, renderer)
+  end
+''' + source[end:]
         source = source.replace('guard < 4 do', 'guard < 9 do').replace('TICK_MS * 4 then', 'TICK_MS * 9 then')
         source = source.replace('  local text = game.fps_text or "0 FPS"', '''  local fps = video.measured_fps()
   if fps == nil or game.gamestate ~= "view" then return end
@@ -67,9 +92,22 @@ end
         source = source.replace(old, "  M.tantoangle = require('tantoangle')", 1)
     elif name == 'render':
         source = "local flat_artemis = require('flat_artemis')\n" + source
+        # Wall texture addressing only reads bits 16 through 22. Keeping
+        # the running integer fraction unwrapped preserves those bits.
+        start = source.index('local function draw_column(self)')
+        end = source.index('\nlocal function draw_masked_column', start)
+        column = source[start:end].replace('  local frac = self.dc_texturemid + (self.dc_yl - self.centery) * fracstep',
+            '  local frac = as_i32(self.dc_texturemid + (self.dc_yl - self.centery) * fracstep)\n  local floor = math.floor')
+        column = column.replace('band(shar(frac, FRACBITS), 127)', 'floor(frac / FRACUNIT) % 128')
+        column = column.replace('frac = as_i32(frac + fracstep)', 'frac = frac + fracstep')
+        source = source[:start] + column + source[end:]
         start = source.index('          local cached_y = -1')
         end = source.index('\n        end\n      end\n    end\n  end\nend\n\nlocal function scale_from_global_angle', start)
         source = source[:start] + '          flat_artemis.draw(self, pl, planeheight, flat, planezlight)' + source[end:]
+        source = source.replace('function M.set_view_size(self, blocks, detail)', 'function M.set_view_size(self, blocks, detail, reduced)')
+        source = source.replace('self.sized_detail == detail then', 'self.sized_detail == detail and self.sized_reduced == reduced then')
+        source = source.replace('  self.sized_detail = detail\n', '  self.sized_detail = detail\n  self.sized_reduced = reduced\n')
+        source = source.replace('  if blocks == 11 then\n    scaled = SCREENWIDTH', '  if reduced then\n    scaled, viewheight = 160, 84\n  elseif blocks == 11 then\n    scaled = SCREENWIDTH')
     return source
 
 

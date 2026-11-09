@@ -1,5 +1,4 @@
 """Build a separate, file-only diagnostic payload. Never uploads or launches it."""
-from pathlib import Path
 from build import build, ROOT
 
 

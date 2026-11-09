@@ -16,6 +16,19 @@ class PortTests(unittest.TestCase):
         lua.execute(('package.path = "' + str(ROOT / 'src/?.lua').replace('\\', '/') + ';" .. package.path').encode())
         return lua
 
+    def test_reduced_view_expands_from_center_without_overwriting_hud(self):
+        lua = self.runtime()
+        lua.execute(b'''
+            local view = {viewwindowx=80, viewwindowy=42, scaledviewwidth=160, viewheight=84}
+            local source = setmetatable({[42*320+81]=7, [125*320+240]=9}, {__index=function() return 0 end})
+            target = {[168*320+1]=13}
+            require('view_artemis').expand(source, target, view)
+        ''')
+        target = lua.globals().target
+        self.assertEqual([target[i] for i in (1, 2, 321, 322)], [7]*4)
+        self.assertEqual([target[i] for i in (53439, 53440, 53759, 53760)], [9]*4)
+        self.assertEqual(target[53761], 13)
+
     def test_bit_operations_wrap_and_handle_signed_values(self):
         lua = self.runtime()
         lua.execute(b'bit = require("bitops")')
