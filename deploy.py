@@ -12,7 +12,9 @@ ROOT = Path(__file__).resolve().parent
 def main():
     parser = argparse.ArgumentParser(description='Install Doom in launcher slot B.')
     parser.add_argument('--dialingspoon', action='store_true', help='Use the ax_ filenames for the DialingSpoon launcher.')
-    prefix = 'ax_' if parser.parse_args().dialingspoon else ''
+    parser.add_argument('--ip', type=ip_address, help='Switch IP address.')
+    args = parser.parse_args()
+    prefix = 'ax_' if args.dialingspoon else ''
     targets = tuple(f'save:/{prefix}{name}' for name in ('exploitb.lua', 'exploitb2.lua'))
     wad = ROOT / 'doom_iwad.wad'
     if wad.is_file():
@@ -29,7 +31,8 @@ def main():
     if wad.read_bytes()[:4] != b'IWAD':
         parser.error(f'{wad.name} is not a valid IWAD.')
 
-    while True:
+    address = args.ip
+    while address is None:
         try:
             address = ip_address(input('Switch IP address: ').strip())
             break
@@ -48,6 +51,9 @@ def main():
             print('Backed up', target, flush=True)
     # Only managed staging files are touched until the upload is fully verified.
     c.upload(wad, 'save:/doom_iwad.wad')
+    music_dir = (ROOT if (ROOT / 'doom_iwad.wad').is_file() else payload.parent) / 'music'
+    for track in sorted(music_dir.glob('doom_music_*.ogg')):
+        c.upload(track, 'save:/' + track.name)
     c.upload(payload, 'save:/doom_upload.lua')
     print(c.eval("local f=assert(io.open('save:/doom_upload.lua','rb')); local s=f:read('*a'); f:close(); assert(loadstring(s,'@doom.lua')); print('Lua 5.1 syntax verified; payload not executed')"), flush=True)
     for target in targets:
@@ -61,6 +67,7 @@ local f=assert(io.open('{target}','rb')); assert(f:read('*a')==s,'installed read
 print('Installed and verified {target}')
 """
         print(c.eval(code), flush=True)
+    c.eval("assert(os.remove('save:/doom_upload.lua'))")
     print(c.eval("local N=assert(n2h); local m='save'; local ptr=assert(N.str_addr(m))+0x18; assert(N.call_deep(N.sdk('fs_commit_save_data'),ptr,0,0,0,0)==0,'save commit failed'); print('Save committed; Doom was not launched')"), flush=True)
     result = {'targets': list(targets), 'payload_sha256': hashlib.sha256(payload.read_bytes()).hexdigest(),
               'iwad_sha256': hashlib.sha256(wad.read_bytes()).hexdigest(), 'backups': str(backup),

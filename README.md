@@ -21,6 +21,6 @@ The build writes `dist/doom.lua` and copies it to both sets of launcher filename
 
 At the default view size, low detail renders the world in a 160×84 viewport. Artemis scales that image and draws a separate full-resolution HUD that refreshes only when it changes. Menus, messages and screen transitions use a single full-frame image. Set `doom_config.split_view = false` before loading the payload to use single-image presentation throughout gameplay. High detail is available in Doom's options.
 
-In an E1M1 turning test on Switch 2, split presentation reached 14.8 FPS versus 6.0 FPS with single-image presentation. Frame rate varies by scene. Audio is disabled. Game saves use `save:/doom_save<slot>.dsg` and need a launcher save commit to persist.
+In an E1M1 turning test on Switch 2, split presentation reached 14.8 FPS versus 6.0 FPS with single-image presentation. Frame rate varies by scene. Music uses Ogg files rendered from the WAD and follows Doom's music volume and track changes. Sound effects are disabled. Game saves use `save:/doom_save<slot>.dsg` and need a launcher save commit to persist.
 
 See the [diagnostic guide](DIAGNOSTICS.md) for troubleshooting. The upstream checkout, WAD, generated payloads, and device records are kept outside Git tracking.

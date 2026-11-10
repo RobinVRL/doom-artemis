@@ -2,7 +2,8 @@
 if doom_stop then doom_stop() end
 if n2h_demo_stop then n2h_demo_stop() end
 local http_frame = n2h_http_frame
-H.args = {'-iwad', H.config.iwad or 'save:/doom_iwad.wad', '-nosound', '-nomusic', '-fps'}
+H.args = {'-iwad', H.config.iwad or 'save:/doom_iwad.wad', '-nosound', '-fps'}
+if H.config.music == false then H.args[#H.args+1] = '-nomusic' end
 if H.config.warp then
     H.args[#H.args+1]='-warp'; H.args[#H.args+1]='1'; H.args[#H.args+1]='1'
 end

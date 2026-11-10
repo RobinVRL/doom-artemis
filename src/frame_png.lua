@@ -32,9 +32,10 @@ local function chunk(kind, body)
     return be32(#body) .. s .. be32(4294967295 - c)
 end
 local M = {}
-function M.encode(pixels, palette, width, height)
+function M.encode(pixels, palette, width, height, alpha)
     assert(#pixels == width * height, 'framebuffer size mismatch')
     assert(#palette == 768, 'expected 256 RGB palette entries')
+    assert(not alpha or (#alpha > 0 and #alpha <= 256), 'invalid palette alpha')
     local rows = {}
     for y = 0, height - 1 do rows[y + 1] = '\0' .. pixels:sub(y * width + 1, (y + 1) * width) end
     local raw = concat(rows)
@@ -53,6 +54,7 @@ function M.encode(pixels, palette, width, height)
     blocks[#blocks + 1] = be32(b * 65536 + a)
     return '\137PNG\13\10\26\10'
         .. chunk('IHDR', be32(width) .. be32(height) .. char(8, 3, 0, 0, 0))
-        .. chunk('PLTE', palette) .. chunk('IDAT', concat(blocks)) .. chunk('IEND', '')
+        .. chunk('PLTE', palette) .. (alpha and chunk('tRNS', alpha) or '')
+        .. chunk('IDAT', concat(blocks)) .. chunk('IEND', '')
 end
 return M

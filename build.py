@@ -98,6 +98,22 @@ local held''')
         start = source.index('  fps_n = fps_n + 1')
         end = source.index('\nend\n\nsound_mod.shutdown(sound)', start)
         source = source[:start] + source[end:]
+    elif name == 'sound':
+        # The desktop port writes temporary MIDI files. On Artemis, use Oggs
+        # rendered from the same WAD tracks by the host music tool.
+        start = source.index('  local midi = mus2mid.mus2mid')
+        end = source.index('\nend\n\nfunction M.play_title_music', start)
+        source = source[:start] + '''  M.stop_music(self)
+  local track = string.lower(string.sub(lump, 3))
+  local loop = looping ~= false
+  local gain = math.floor(self.music_volume / 15 * 1000)
+  if video.music_open(track, loop, gain) then
+    self.music_on = true
+    self.music_name = string.lower(name)
+    self.music_loop = loop
+  end''' + source[end:]
+        source = source.replace('local mus2mid = require("mus2mid")\n', '')
+        source = source.replace('local music_seq = 0\n', '')
     elif name == 'saveg':
         # Keep game saves in the same managed namespace as the payload.
         source = source.replace('"doomsav"', '"doom_save"')

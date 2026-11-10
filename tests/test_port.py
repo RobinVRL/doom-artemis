@@ -16,6 +16,27 @@ class PortTests(unittest.TestCase):
         lua.execute(('package.path = "' + str(ROOT / 'src/?.lua').replace('\\', '/') + ';" .. package.path').encode())
         return lua
 
+    def test_artemis_music_uses_native_loop_and_releases_the_channel(self):
+        lua = self.runtime()
+        lua.execute(b'''
+            calls = {}
+            local engine = {}
+            function engine:isFileExists(path) return path == 'save:/doom_music_e1m1.ogg' end
+            function engine:tag(args) calls[#calls + 1] = args end
+            package.loaded.artemis_host = {engine=engine, config={}}
+            local video = require('video_artemis')
+            assert(not video.music_open('missing', true, 750))
+            assert(#calls == 0)
+            assert(video.music_open('e1m1', true, 750))
+            assert(calls[1][1] == 'splay' and calls[1].file == 'save:/doom_music_e1m1.ogg')
+            assert(calls[1].loop == 1 and calls[1].gain == 750)
+            video.music_volume(500)
+            assert(calls[2][1] == 'sfade' and calls[2].gain == 500)
+            video.music_close()
+            video.music_close()
+            assert(#calls == 3 and calls[3][1] == 'sstop')
+        ''')
+
     def test_reduced_view_expands_from_center_without_overwriting_hud(self):
         lua = self.runtime()
         lua.execute(b'''
@@ -265,9 +286,11 @@ class EngineIntegrationTests(unittest.TestCase):
     def test_actual_engine_renders_moves_fires_and_restores_http_on_minus(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as folder:
             lua = self.boot(folder)
+            lua.execute(b'function e:isFileExists(path) return path == "save:/doom_music_e1m1.ogg" end')
             self.frame(lua)
             h = lua.globals().doom_status
             self.assertEqual(h.game.world.mapname, b'E1M1')
+            self.assertEqual(lua.eval(b'game == global_game and doom_status.game.sound.music_name'), b'e1m1')
             self.assertEqual(len(h.raw), 64000)
             self.assertGreater(len(set(h.raw)), 50)
             self.assertTrue((Path(folder) / 'a.png').exists())
@@ -289,6 +312,9 @@ class EngineIntegrationTests(unittest.TestCase):
             self.assertEqual(lua.eval(b'package.path==original_package_path and game==global_game'), True)
             self.assertFalse((Path(folder) / 'a.png').exists())
             self.assertFalse((Path(folder) / 'b.png').exists())
+            audio_tags = [tag[1] for _, tag in lua.globals().tags_seen.items()
+                          if tag[1] in (b'splay', b'sstop')]
+            self.assertEqual(audio_tags, [b'splay', b'sstop'])
 
     def test_missing_wad_returns_to_http_without_replacing_global_game(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as folder:

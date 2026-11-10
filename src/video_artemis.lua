@@ -107,6 +107,7 @@ function M.present(raw, world)
 end
 function M.measured_fps() return H.fps end
 function M.shutdown()
+    M.music_close()
     engine:tag{'lydel', id=layer}
     if split_active then engine:tag{'lydel', id=hud_layer} end
     engine:tag{'flip'}
@@ -159,9 +160,26 @@ function M.audio_open() return nil end
 function M.audio_queue() end
 function M.audio_clear() end
 function M.audio_close() end
-function M.music_open() return false end
+local music_active = false
+function M.music_open(name, looping, gain)
+    local path = 'save:/doom_music_' .. name .. '.ogg'
+    local ok, exists = pcall(function() return engine:isFileExists(path) end)
+    if not ok or not exists then return false end
+    music_active = pcall(function()
+        engine:tag{'splay', file=path, time=0, loop=looping and 1 or 0, gain=gain,
+            buffer=sesys_getbuffer and sesys_getbuffer('bgm') or 3000}
+    end)
+    return music_active
+end
+-- The native player loops tracks without polling the Doom frame clock.
 function M.music_status() return '' end
 function M.music_play() end
-function M.music_volume() end
-function M.music_close() end
+function M.music_volume(gain)
+    if music_active then engine:tag{'sfade', time=0, gain=gain} end
+end
+function M.music_close()
+    if not music_active then return end
+    music_active = false
+    engine:tag{'sstop', time=0}
+end
 return M
